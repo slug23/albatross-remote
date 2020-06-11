@@ -374,7 +374,7 @@ async function action(args, rl) {
             }
             const addresses = await jsonRpcFetch('listAccounts');
             const accounts = addresses.map(address => ({ address }));
-            accounts.sort((a, b) => a.address > b.address);
+            accounts.sort((a, b) => a.address > b.address ? 1 : -1);
             for (const account of accounts) {
                 account.balance = await jsonRpcFetch('getBalance', account.address);
                 console.log(`${account.address} | ${nimValueFormat(account.balance, 14)}`);
@@ -720,6 +720,112 @@ async function action(args, rl) {
             console.log(JSON.stringify(await jsonRpcFetch('peerState', args[1], args.length > 2 ? args[2] : undefined)));
             return;
         }
+        // Staking
+        case 'stakes': {
+            if (!rl && !argv.silent) {
+                await displayInfoHeader();
+            }
+            const stakes = await jsonRpcFetch('listStakes');
+
+            console.log(chalk`{bold Active Validators}`);
+            stakes.activeValidators.sort((a, b) => a.rewardAddress > b.rewardAddress ? 1 : -1);
+            for (const validator of stakes.activeValidators) {
+                console.log(`${validator.rewardAddress} | ${nimValueFormat(validator.balance, 14)} | ${Object.keys(validator.stakes).length} delegates`);
+            }
+
+            console.log(chalk`{bold Inactive Validators}`);
+            for (const { validator } of stakes.inactiveValidators) {
+                console.log(chalk`{gray ${validator.rewardAddress} | ${nimValueFormat(validator.balance, 14)} | ${Object.keys(validator.stakes).length} delegates}`);
+            }
+
+            console.log(chalk`{bold Inactive Stakes}`);
+            for (const stake of stakes.inactiveStakes) {
+                console.log(chalk`{gray ${stake.stakerAddress} | ${nimValueFormat(stake.balance, 14)}}`);
+            }
+            return;
+        }
+        case 'stakes.raw': {
+            console.dir(await jsonRpcFetch('listStakes'), {depth: Infinity});
+            return;
+        }
+        case 'stake': {
+            if (!rl && !argv.silent) {
+                await displayInfoHeader(0);
+            }
+            if (rl && !args[1]) {
+                // Ask for options
+                args[1] = await new Promise(resolve => { rl.question('Staking address? ', resolve); });
+            }
+            if (args.length < 2) {
+                console.error('Specify staking address');
+                return;
+            }
+            const address = args[1].toUpperCase().replace(/\s/g, '').replace(/.{4}/g, '$& ').trim();
+            if (address.substring(0, 2) !== 'NQ' || address.length !== 44) {
+                console.error('Specify the address in userfriendly format (NQ-format)');
+                return;
+            }
+            const stakes = await jsonRpcFetch('listStakes');
+
+            // Collect data
+            const activeValidators = stakes.activeValidators
+                .filter(validator => validator.rewardAddress === address)
+                .reduce((summary, validator) => ({
+                    balance: summary.balance + validator.balance,
+                    stakeCount: summary.stakeCount + Object.keys(validator.stakes).length,
+                    validatorCount: summary.validatorCount + 1,
+                }), { balance: 0, stakeCount: 0, validatorCount: 0 });
+            const activeDelegatedStakes = stakes.activeValidators.map(validator => {
+                if (validator.rewardAddress === address) return null;
+                const amount = validator.stakes[address];
+                if (amount) return { rewardAddress: validator.rewardAddress, amount };
+                return null;
+            }).filter(obj => Boolean(obj));
+            const activeDelegatedStakeSum = activeDelegatedStakes.reduce((sum, stake) => sum + stake.amount, 0);
+
+            const inactiveValidators = stakes.inactiveValidators
+                .filter(validator => validator.rewardAddress === address)
+                .reduce((summary, validator) => ({
+                    balance: summary.balance + validator.balance,
+                    stakeCount: summary.stakeCount + Object.keys(validator.stakes).length,
+                    validatorCount: summary.validatorCount + 1,
+                }), { balance: 0, stakeCount: 0, validatorCount: 0 });
+            const inactiveDelegatedStakes = stakes.inactiveValidators.map(({validator}) => {
+                if (validator.rewardAddress === address) return null;
+                const amount = validator.stakes[address];
+                if (amount) return { rewardAddress: validator.rewardAddress, amount };
+                return null;
+            }).filter(obj => Boolean(obj));
+            const inactiveDelegatedStakeSum = inactiveDelegatedStakes.reduce((sum, stake) => sum + stake.amount, 0);
+
+            const inactiveStake = stakes.inactiveStakes.find(stake => stake.stakerAddress === address);
+
+            // Output
+            if (activeValidators.validatorCount) {
+                console.log(chalk`\n{bold Active Validators (${activeValidators.validatorCount})} ${nimValueFormat(activeValidators.balance, 40 - activeValidators.validatorCount.toString().length)} | ${activeValidators.stakeCount} delegates`);
+            }
+            console.log(chalk`\n{bold Active Delegated Stake} (${nimValueFormat(activeDelegatedStakeSum)}):`);
+            for (const stake of activeDelegatedStakes) {
+                console.log(`${stake.rewardAddress} | ${nimValueFormat(stake.amount, 14)}`);
+            }
+            if (!activeDelegatedStakes.length) console.log('- none -');
+
+            if (inactiveValidators.validatorCount) {
+                console.log(chalk`\n{gray Inactive Validators (${inactiveValidators.validatorCount}) ${nimValueFormat(inactiveValidators.balance, 38 - inactiveValidators.validatorCount.toString().length)} | ${inactiveValidators.stakeCount} delegates}`);
+            }
+            if (inactiveDelegatedStakeSum) {
+                console.log(chalk`\n{gray Inactive Delegated Stake (${nimValueFormat(inactiveDelegatedStakeSum)}):}`);
+                for (const stake of inactiveDelegatedStakes) {
+                    console.log(chalk`{gray ${stake.rewardAddress} | ${nimValueFormat(stake.amount, 14)}}`);
+                }
+            }
+
+            if (inactiveStake) {
+                console.log(chalk`\n{gray Inactive Stake: ${nimValueFormat(inactiveStake.balance, 45)}}`);
+            }
+            return;
+        }
+        // Other
         case 'default': {
             try {
                 await displayInfoHeader(43);
@@ -779,6 +885,9 @@ async function action(args, rl) {
                             specified, invokes the named action on the peer.
                             Currently supported actions include:
                             connect, disconnect, ban, unban, fail
+    stakes                  Display list of all validators, both active and
+                            inactive, and inactive stakes in the network.
+    stake ADDR              Display staking status of address ADDR.
     transaction TX          Display details about transaction TX.
     transaction BLOCK IDX   Display details about transaction at index IDX in
                             block BLOCK.
