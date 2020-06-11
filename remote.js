@@ -782,6 +782,13 @@ understood in hex or base64 format of their hash.`);
             if (rl) {
                 console.log('Unknown command. Use `help` command for usage instructions.');
                 console.log('');
+                args = args.map(arg => {
+                    if (parseInt(arg, 10).toString() === arg) {
+                        return parseInt(arg, 10);
+                    } else {
+                        return arg;
+                    }
+                });
                 console.dir(await jsonRpcFetch(...args), {depth: Infinity});
                 return;
             }
