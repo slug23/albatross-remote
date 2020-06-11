@@ -1,0 +1,13 @@
+{
+  "name": "albatross-remote",
+  "version": "0.1.0",
+  "description": "A JSON-RPC client for Nimiq Albatross nodes.",
+  "main": "remote.js",
+  "author": "Nimiq Network Ltd. <info@nimiq.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "btoa": "^1.2.1",
+    "chalk": "^4.1.0",
+    "minimist": "^1.2.5"
+  }
+}
