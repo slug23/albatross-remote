@@ -425,6 +425,10 @@ async function action(args, rl) {
             if (!rl && !argv.silent) {
                 await displayInfoHeader(79);
             }
+            if (rl && !args[1]) {
+                // Ask for options
+                args[1] = (await new Promise(resolve => { rl.question('Block hash or number? (latest)', resolve); })) || 'latest';
+            }
             if (args.length === 2) {
                 if (args[1].length === 64 || args[1].length === 44) {
                     displayBlock(await jsonRpcFetch('getBlockByHash', args[1]), args[1]);
@@ -468,6 +472,10 @@ async function action(args, rl) {
             if (!rl && !argv.silent) {
                 await displayInfoHeader(79);
             }
+            if (rl && !args[1]) {
+                // Ask for options
+                args[1] = await new Promise(resolve => { rl.question('Transaction hash? ', resolve); });
+            }
             if (args.length === 2) {
                 await displayTransaction(await jsonRpcFetch('getTransactionByHash', args[1]), args[1]);
                 return;
@@ -503,6 +511,13 @@ async function action(args, rl) {
             if (!rl && !argv.silent) {
                 await displayInfoHeader(74);
             }
+            if (rl && args.length === 1) {
+                // Ask for options
+                args[1] = await new Promise(resolve => { rl.question('From address? ', resolve); });
+                args[2] = await new Promise(resolve => { rl.question('To address? ', resolve); });
+                args[3] = await new Promise(resolve => { rl.question('Value [NIM]? ', resolve); });
+                args[4] = (await new Promise(resolve => { rl.question('Fee [NIM]? (0) ', resolve); })) || 0;
+            }
             if (args.length < 4 || args.length > 5) {
                 console.error('Arguments for \'transaction.send\': from, to, value[, fee]');
                 return;
@@ -534,6 +549,10 @@ async function action(args, rl) {
             if (!rl && !argv.silent) {
                 await displayInfoHeader(74);
             }
+            if (rl && !args[1]) {
+                // Ask for options
+                args[1] = await new Promise(resolve => { rl.question('Transaction hash? ', resolve); });
+            }
             if (args.length !== 2) {
                 console.error('Specify transaction hash');
                 return;
@@ -561,6 +580,10 @@ async function action(args, rl) {
             console.error('blockchain.get_transaction_receipts_by_address() not defined in core-rs-albatross');
             return;
 
+            if (rl && !args[1]) {
+                // Ask for options
+                args[1] = await new Promise(resolve => { rl.question('Address? ', resolve); });
+            }
             if (args.length < 2) {
                 console.error('Specify account address');
                 return;
@@ -666,6 +689,10 @@ async function action(args, rl) {
             return;
         }
         case 'peer': {
+            if (rl && !args[1]) {
+                // Ask for options
+                args[1] = await new Promise(resolve => { rl.question('Peer URI? ', resolve); });
+            }
             if (args.length < 2) {
                 console.error('Specify peer URI');
                 return;
