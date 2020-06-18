@@ -733,6 +733,7 @@ async function action(args, rl) {
                 console.log(`${validator.rewardAddress} | ${nimValueFormat(validator.balance, 14)} | ${Object.keys(validator.stakes).length} delegates`);
             }
 
+	if(!argv['active-only']) {
             console.log(chalk`{bold Inactive Validators}`);
             for (const { validator } of stakes.inactiveValidators) {
                 console.log(chalk`{gray ${validator.rewardAddress} | ${nimValueFormat(validator.balance, 14)} | ${Object.keys(validator.stakes).length} delegates}`);
@@ -742,6 +743,7 @@ async function action(args, rl) {
             for (const stake of stakes.inactiveStakes) {
                 console.log(chalk`{gray ${stake.stakerAddress} | ${nimValueFormat(stake.balance, 14)}}`);
             }
+	}
             return;
         }
         case 'stakes.raw': {
