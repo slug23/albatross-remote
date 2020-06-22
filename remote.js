@@ -395,6 +395,17 @@ async function action(args, rl) {
             console.dir(account);
             return;
         }
+        case 'account.unlock': {
+            if (!rl && !argv.silent) {
+                await displayInfoHeader(81);
+            }
+            if (args.length === 2) {
+                await displayAccount(await jsonRpcFetch('unlockAccount', args[1]), args[1]);
+                return;
+            }
+            console.error('Specify account address');
+            return;
+        }
         case 'account': {
             console.error('getAccount not yet supported in core-rs-albatross RPC');
             return;
@@ -727,6 +738,26 @@ async function action(args, rl) {
             }
             const stakes = await jsonRpcFetch('listStakes');
 
+            if(argv['address']) {
+					let address = argv['address']
+					console.log("stakes: ", stakes)
+            	const activeValidator = stakes.activeValidators.find(v => v.rewardAddress === address);
+            	const inactiveValidator = stakes.inactiveValidators.find(v => v.rewardAddress === address);
+//            	const inactiveStake = stakes.inactiveStakes.find(stake => stake.stakerAddress === address);
+				let validator_state = activeValidator ? 'ACTIVE' : inactiveValidator ? 'INACTIVE' : 'NOTFOUND'
+				let v = activeValidator || activeValidator
+
+				if(v) {
+						console.log(`${validator_state} ${v.rewardAddress} | ${nimValueFormat(v.balance, 14)} | ${Object.keys(v.stakes).length} delegates`);
+				} else {
+						console.log(`Address "${argv['address']} not found.`)
+				}
+				
+				
+
+                return
+	    	}
+
             console.log(chalk`{bold Active Validators}`);
             stakes.activeValidators.sort((a, b) => a.rewardAddress > b.rewardAddress ? 1 : -1);
             for (const validator of stakes.activeValidators) {
@@ -874,6 +905,7 @@ async function action(args, rl) {
     accounts.import PRIVATE_KEY
                             Import a Nimiq Account from its private key and
                             store it in the WalletStore of the Nimiq node.
+    account.unlock          Unlock an existing Nimiq Account
     account ADDR            Display details for account with address ADDR.
     block BLOCK             Display details of block BLOCK.
     mempool                 Display mempool stats.
