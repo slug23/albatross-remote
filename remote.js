@@ -395,6 +395,18 @@ async function action(args, rl) {
             console.dir(account);
             return;
         }
+        case 'account.import': {
+            if (!rl && !argv.silent) {
+                await displayInfoHeader(81);
+            }
+            if (args.length === 2) {
+                let res = await jsonRpcFetch('importRawKey', args[1])
+		console.log("Imported Account: ", res)
+                return;
+            }
+            console.error('Specify Raw Key');
+            return;
+        }
         case 'account.unlock': {
             if (!rl && !argv.silent) {
                 await displayInfoHeader(81);
@@ -902,7 +914,7 @@ async function action(args, rl) {
     accounts                List local accounts.
     accounts.create         Create a new Nimiq Account and store it in the
                             WalletStore of the Nimiq node.
-    accounts.import PRIVATE_KEY
+    account.import PRIVATE_KEY
                             Import a Nimiq Account from its private key and
                             store it in the WalletStore of the Nimiq node.
     account.unlock          Unlock an existing Nimiq Account
